@@ -1,0 +1,358 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Solusi Transportasi PT ABC</title>
+
+<style>
+    body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #4f46e5, #9333ea);
+        margin: 0;
+        padding: 20px;
+        color: #fff;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 32px;
+        letter-spacing: 1px;
+        font-weight: 700;
+        margin-bottom: 5px;
+        text-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    }
+
+    .subtitle {
+        text-align: center;
+        margin-top: -5px;
+        margin-bottom: 20px;
+        opacity: 0.9;
+    }
+
+    .card {
+        background: rgba(255,255,255,0.15);
+        padding: 20px;
+        border-radius: 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        margin-bottom: 25px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        backdrop-filter: blur(6px);
+    }
+
+    th, td {
+        padding: 10px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.25);
+        text-align: center;
+        border-radius: 6px;
+    }
+
+    th {
+        background: rgba(0,0,0,0.25);
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .btn {
+        padding: 14px 22px;
+        background: #22d3ee;
+        color: #111;
+        font-weight: bold;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-top: 15px;
+        box-shadow: 0 5px 12px rgba(0,0,0,0.3);
+        transition: 0.2s;
+        font-size: 15px;
+    }
+
+    .btn:hover {
+        background: #06b6d4;
+        transform: scale(1.05);
+    }
+
+    .output {
+        margin-top: 15px;
+    }
+
+    .result-table td {
+        background: rgba(255,255,255,0.18);
+        font-weight: 600;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Solusi Transportasi</h1>
+<p class="subtitle">Menggunakan Metode VAM & MODI — Input dapat diubah sesuai kebutuhan</p>
+
+<div class="card">
+    <h2>Input Data Transportasi</h2>
+
+    <p><b>Biaya Transportasi (Cost):</b></p>
+
+    <table id="costTable">
+        <tr>
+            <th></th>
+            <th>Medan</th>
+            <th>Makassar</th>
+            <th>Denpaspar</th>
+        </tr>
+        <tr>
+            <th>Cirebon</th>
+            <td><input type="number" value="10"></td>
+            <td><input type="number" value="12"></td>
+            <td><input type="number" value="9"></td>
+        </tr>
+        <tr>
+            <th>Yogyakarta</th>
+            <td><input type="number" value="7"></td>
+            <td><input type="number" value="10"></td>
+            <td><input type="number" value="14"></td>
+        </tr>
+    </table>
+
+    <br>
+
+    <p><b>Supply:</b></p>
+    <input id="sup1" type="number" value="300"> Cirebon  
+    <br><br>
+    <input id="sup2" type="number" value="500"> Yogyakarta  
+
+    <br><br>
+
+    <p><b>Demand:</b></p>
+    <input id="dem1" type="number" value="150"> Medan  
+    <br><br>
+    <input id="dem2" type="number" value="300"> Makassar  
+    <br><br>
+    <input id="dem3" type="number" value="350"> Denpasar  
+    <br>
+
+    <button class="btn" onclick="jalankan()">Jalankan VAM & MODI</button>
+</div>
+
+<div class="card output">
+    <h2>Hasil Perhitungan</h2>
+    <div id="outputArea">Belum ada hasil. Isi data lalu tekan tombol.</div>
+</div>
+
+
+<script>
+/* ---------------------------- VAM ---------------------------- */
+function VAM(costs, supply, demand) {
+    let m = supply.length;
+    let n = demand.length;
+    let alloc = Array.from({ length: m }, () => Array(n).fill(0));
+
+    let sup = [...supply];
+    let dem = [...demand];
+
+    while (true) {
+        let penalties = [];
+
+        // Penalti baris
+        for (let i = 0; i < m; i++) {
+            if (sup[i] > 0) {
+                let row = [];
+                for (let j = 0; j < n; j++) if (dem[j] > 0) row.push(costs[i][j]);
+                row.sort((a,b)=>a-b);
+
+                if (row.length >= 2)
+                    penalties.push({ type: 'row', index: i, value: row[1]-row[0] });
+            }
+        }
+
+        // Penalti kolom
+        for (let j = 0; j < n; j++) {
+            if (dem[j] > 0) {
+                let col = [];
+                for (let i = 0; i < m; i++) if (sup[i] > 0) col.push(costs[i][j]);
+                col.sort((a,b)=>a-b);
+
+                if (col.length >= 2)
+                    penalties.push({ type: 'col', index: j, value: col[1]-col[0] });
+            }
+        }
+
+        if (penalties.length === 0) break;
+
+        penalties.sort((a,b)=>b.value - a.value);
+        let chosen = penalties[0];
+
+        let bestCost = Infinity;
+        let pos = { i: -1, j: -1 };
+
+        if (chosen.type === 'row') {
+            let i = chosen.index;
+            for (let j = 0; j < n; j++) {
+                if (dem[j] > 0 && costs[i][j] < bestCost) {
+                    bestCost = costs[i][j];
+                    pos = { i, j };
+                }
+            }
+        } else {
+            let j = chosen.index;
+            for (let i = 0; i < m; i++) {
+                if (sup[i] > 0 && costs[i][j] < bestCost) {
+                    bestCost = costs[i][j];
+                    pos = { i, j };
+                }
+            }
+        }
+
+        let amount = Math.min(sup[pos.i], dem[pos.j]);
+        alloc[pos.i][pos.j] = amount;
+
+        sup[pos.i] -= amount;
+        dem[pos.j] -= amount;
+    }
+
+    return alloc;
+}
+
+/* ---------------------------- MODI ---------------------------- */
+function MODI(costs, alloc) {
+    let m = alloc.length;
+    let n = alloc[0].length;
+
+    // Hitung total biaya
+    let total = 0;
+    for (let i = 0; i < m; i++)
+        for (let j = 0; j < n; j++)
+            total += alloc[i][j] * costs[i][j];
+
+    // Hitung U dan V
+    let U = Array(m).fill(null);
+    let V = Array(n).fill(null);
+
+    U[0] = 0;
+
+    let updated = true;
+    while (updated) {
+        updated = false;
+
+        for (let i = 0; i < m; i++) {
+            for (let j = 0; j < n; j++) {
+                if (alloc[i][j] > 0) {
+                    if (U[i] !== null && V[j] === null) {
+                        V[j] = costs[i][j] - U[i];
+                        updated = true;
+                    } else if (U[i] === null && V[j] !== null) {
+                        U[i] = costs[i][j] - V[j];
+                        updated = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Hitung Cj - Ui - Vj
+    let evalList = [];
+    for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+            if (alloc[i][j] === 0) {
+                let val = costs[i][j] - (U[i] + V[j]);
+                evalList.push({ i, j, val });
+            }
+        }
+    }
+
+    return { total, U, V, evalList };
+}
+
+/* -------------------------- Jalankan -------------------------- */
+function jalankan() {
+    let costs = [];
+    let rows = document.querySelectorAll("#costTable tr");
+
+    for (let i = 1; i < rows.length; i++) {
+        let c = rows[i].querySelectorAll("td input");
+        costs.push([Number(c[0].value), Number(c[1].value), Number(c[2].value)]);
+    }
+
+    let supply = [
+        Number(document.getElementById("sup1").value),
+        Number(document.getElementById("sup2").value)
+    ];
+
+    let demand = [
+        Number(document.getElementById("dem1").value),
+        Number(document.getElementById("dem2").value),
+        Number(document.getElementById("dem3").value)
+    ];
+
+    let vam = VAM(costs, supply, demand);
+    let modi = MODI(costs, vam);
+
+    let html = `
+    <h3>1. Solusi Awal Menggunakan Metode VAM</h3>
+    <p><b>Total Biaya Transportasi Awal:</b> <span style="color:#22d3ee;">Rp ${modi.total.toLocaleString()}</span></p>
+
+    <table class="result-table">
+        <tr>
+            <th></th><th>Medan</th><th>Makassar</th><th>Denpasar</th>
+        </tr>`;
+
+    let nama = ["Cirebon", "Yogyakarta"];
+
+    for (let i = 0; i < vam.length; i++) {
+        html += `<tr><th>${nama[i]}</th>`;
+        for (let j = 0; j < vam[0].length; j++) {
+            html += `<td>
+                Cost: ${costs[i][j]} <br>
+                Alloc: <b>${vam[i][j]}</b>
+            </td>`;
+        }
+        html += `</tr>`;
+    }
+
+    html += `</table><br>
+    <h3>2. Solusi Optimal Menggunakan Metode MODI</h3>
+    <p><b>Biaya Transportasi Optimal:</b> <span style="color:#22d3ee;">Rp ${modi.total.toLocaleString()}</span></p>
+    
+    <h4>Nilai U dan V</h4>
+
+    <table class="result-table">
+        <tr><th>U (Sumber)</th><th>Nilai</th></tr>
+        <tr><td>Cirebon</td><td>${modi.U[0]}</td></tr>
+        <tr><td>Yogyakarta</td><td>${modi.U[1]}</td></tr>
+    </table><br>
+
+    <table class="result-table">
+        <tr><th>V (Tujuan)</th><th>Nilai</th></tr>
+        <tr><td>Medan</td><td>${modi.V[0]}</td></tr>
+        <tr><td>Makassar</td><td>${modi.V[1]}</td></tr>
+        <tr><td>Denpasar</td><td>${modi.V[2]}</td></tr>
+    </table><br>
+
+    <h4>Evaluasi Cj - Ui - Vj (Sel Kosong)</h4>
+    <table class="result-table">
+        <tr><th>Sel</th><th>Perhitungan</th><th>Nilai</th></tr>`;
+
+    modi.evalList.forEach(e => {
+        html += `
+        <tr>
+            <td>${nama[e.i]} → ${["Medan","Makassar","Denpasar"][e.j]}</td>
+            <td>${costs[e.i][e.j]} - (${modi.U[e.i]} + ${modi.V[e.j]})</td>
+            <td><b>${e.val}</b></td>
+        </tr>`;
+    });
+
+    html += `</table>`;
+
+    document.getElementById("outputArea").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
